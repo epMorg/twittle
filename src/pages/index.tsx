@@ -20,10 +20,11 @@ const CreatePostWizard = () => {
 
   const [input, setInput] = useState("");
 
+  const ctx = api.useUtils();
+
   const {mutate, isLoading: isPosting} = api.posts.create.useMutation({
     onSuccess: () => {
       setInput("");
-      const ctx = api.useUtils();
       void ctx.posts.getAll.invalidate();
     },
     onError: (e) => {
@@ -89,7 +90,12 @@ const PostView = (props: PostWithUser) => {
     />
     <div className="flex flex-col">
       <div className="flex text-slate-400 gap-3">
-        <span>{`@${author.username}`}</span><span>{` · ${dayjs(post.createdAt).fromNow()}`}</span>      
+        <Link href= {`/@${author.username} `}>
+          <span>{`@${author.username}`}</span>
+        </Link>
+        <Link href= {`/post/${post.id} `}>
+          <span className="font-thin">{` · ${dayjs(post.createdAt).fromNow()}`}</span>
+        </Link>
       </div>
       <span className="text-2xl">{post.content}</span>
     </div>   
