@@ -1,19 +1,12 @@
 import { z } from "zod";
 import { createTRPCRouter, privateProcedure, publicProcedure } from "~/server/api/trpc";
 import { clerkClient } from "@clerk/nextjs/server";
-import type { User } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { error } from "console";
+import { trimUserInfoForClient } from "~/server/helpers/TrimUserInfoForClient";
 
-const filterUserForClient = (user: User) => {
-  return {
-    userId: user.id,
-    username: user.username,
-    profileImage: user.profileImageUrl 
-  }
-}
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
@@ -33,7 +26,7 @@ export const postsRouter = createTRPCRouter({
         userId: posts.map(post=> post.authorId),
         limit: 100,
       })
-      ).map(filterUserForClient); 
+      ).map(trimUserInfoForClient); 
     
       return posts.map((post) => {
         const author = users.find(user => user.userId === post.authorId)
@@ -54,7 +47,8 @@ export const postsRouter = createTRPCRouter({
       })
   }),
 
-  create: privateProcedure.input(z.object({ content: z.string().emoji("Only emojis are allowed!").min(1).max(280), })).mutation(async ({ ctx, input }) => {
+  create: privateProcedure.input(z.object({ content: z.string().emoji("Only emojis are allowed!").min(1).max(280), }))
+  .mutation(async ({ ctx, input }) => {
     const authorId = ctx.userId;
 
     const { success } = await ratelimit.limit(authorId)
