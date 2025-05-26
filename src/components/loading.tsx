@@ -1,5 +1,3 @@
-import { PhoneNumber } from "@clerk/nextjs/dist/types/server";
-
 export const LoadingSpinner = (props: {size?: number}) => {
 
     return (

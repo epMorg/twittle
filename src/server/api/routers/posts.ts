@@ -4,7 +4,6 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { error } from "console";
 import { trimUserInfoForClient } from "~/server/helpers/TrimUserInfoForClient";
 
 
