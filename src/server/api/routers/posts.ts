@@ -11,7 +11,7 @@ import { trimUserInfoForClient } from "~/server/helpers/TrimUserInfoForClient";
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
   limiter: Ratelimit.slidingWindow(3,"1 m"),
-  analytics: true
+  analytics: true,
 })
 
 export const postsRouter = createTRPCRouter({
