@@ -1,17 +1,15 @@
 import type { GetStaticProps, NextPage } from "next";
 import Head from "next/head";
 import { api } from "~/utils/api";
-import { createServerSideHelpers } from "@trpc/react-query/server";
-import { appRouter } from "~/server/api/root";
-import superjson from "superjson";
-import { prisma } from "~/server/db";
 import { PageLayout } from "~/components/layout";
 import Image from "next/image";
 import { PostView } from "~/components/postview";
+import { generateSSGHelper } from "~/server/helpers/ssgHelper";
+import  ErrorView  from "~/components/errorview";
 
 const ProfileFeed = (props: {userId: string}) => {
 
-  const { data, isLoading } = api.posts.getPostsByUserId.useQuery({userId: props.userId});
+  const { data } = api.posts.getPostsByUserId.useQuery({userId: props.userId});
 
   if (!data || data.length === 0) return <div>User has not posted</div>
 
@@ -23,11 +21,17 @@ const ProfileFeed = (props: {userId: string}) => {
 }
 
 const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
-  const { data } = api.profile.getUserByUsername.useQuery({
-    username,
-  });
 
-  if (!data) return <div>404</div>;
+  const { data } = api.profile.getUserByUsername.useQuery(
+    { username },
+  );
+
+    if (!data){
+      return 
+        <PageLayout>
+          <ErrorView code={404} message={"Post not found!"} />
+        </PageLayout>  
+    }
 
   return (
     <>
@@ -48,32 +52,28 @@ const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
         <div className="h-[64px]" />
         <div className="p-4 text-2xl font-bold">{`@${data.username ?? ""}`}</div>
         <div className="border-b border-slate-400 w-full"/>
-        <div className="flex flex-col">
           {<ProfileFeed userId={data.userId} />}
-        </div>
       </PageLayout>
     </>
   );
 };
 
 export const getStaticProps: GetStaticProps = async (context) => {
-  const ssg = createServerSideHelpers({
-    router: appRouter,
-    ctx: { prisma, userId: null },
-    transformer: superjson,
-  });
+  const ssg = generateSSGHelper();
 
   const slug = context.params?.slug;
   if (typeof slug !== "string") throw new Error("no slug");
 
   const username = slug.replace("@", "");
-  await ssg.profile.getUserByUsername.prefetch({
+  const user = await ssg.profile.getUserByUsername.fetch({
     username: username,
   });
 
+  await ssg.posts.getPostsByUserId.prefetch({userId: user.userId})
+
   return {
     props: {
-      trpcSate: ssg.dehydrate(),
+      trpcState: ssg.dehydrate(),
       username: username,
     },
   };
