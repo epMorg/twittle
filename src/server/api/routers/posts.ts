@@ -1,17 +1,40 @@
 import { z } from "zod";
 import {
+  type createTRPCContext,
   createTRPCRouter,
   privateProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
 import { clerkClient } from "@clerk/nextjs/server";
-import { TRPCError } from "@trpc/server";
+import { type inferAsyncReturnType, TRPCError } from "@trpc/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { trimUserInfoForClient } from "~/server/helpers/trimUserInfoForClient";
 import type { Post } from "@prisma/client";
 
-const addUserDataToPosts = async (posts: Post[]) => {
+type Context = inferAsyncReturnType<typeof createTRPCContext>;
+
+const getLikedPostIds = async (
+  userId: string,
+  postIds: string[],
+  ctx: Context
+) => {
+  const likedPosts = await ctx.prisma.like.findMany({
+    where: {
+      userId: userId,
+      postId: {
+        in: postIds,
+      },
+    },
+    select: {
+      postId: true,
+    },
+  });
+
+  return likedPosts.map((post) => post.postId);
+};
+
+const addUserDataToPosts = async (posts: Post[], likedPostIds: string[]) => {
   const users = (
     await clerkClient.users.getUserList({
       userId: posts.map((post) => post.authorId),
@@ -19,8 +42,10 @@ const addUserDataToPosts = async (posts: Post[]) => {
     })
   ).map(trimUserInfoForClient);
 
+  const userMap = new Map(users.map((user) => [user.userId, user]));
+
   return posts.map((post) => {
-    const author = users.find((user) => user.userId === post.authorId);
+    const author = userMap.get(post.authorId);
 
     if (!author || !author.username)
       throw new TRPCError({
@@ -29,11 +54,12 @@ const addUserDataToPosts = async (posts: Post[]) => {
       });
 
     return {
-      post,
+      post: post,
       author: {
         ...author,
         username: author.username,
       },
+      isLiked: likedPostIds.includes(post.id),
     };
   });
 };
@@ -51,25 +77,35 @@ export const postsRouter = createTRPCRouter({
       orderBy: [{ createdAt: "desc" }],
     });
 
-    return addUserDataToPosts(posts);
+    const postIds = posts.map((post) => post.id);
+
+    const likedPostIds = ctx.userId
+      ? await getLikedPostIds(ctx.userId, postIds, ctx)
+      : [];
+
+    return addUserDataToPosts(posts, likedPostIds);
   }),
 
   getPostById: publicProcedure
-      .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const post = await ctx.prisma.post.findUnique({
         where: {
-          id: input.id
+          id: input.id,
         },
       });
 
       if (!post)
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Post not found!"
+          message: "Post not found!",
         });
 
-      return (await addUserDataToPosts([post]))[0];
+      const likedPostIds = ctx.userId
+        ? await getLikedPostIds(ctx.userId, [post.id], ctx)
+        : [];
+
+      return (await addUserDataToPosts([post], likedPostIds))[0];
     }),
 
   getPostsByUserId: publicProcedure
@@ -87,7 +123,16 @@ export const postsRouter = createTRPCRouter({
         orderBy: [{ createdAt: "desc" }],
       });
 
-      return addUserDataToPosts(posts);
+      if (posts.length === 0)
+        return [] as Awaited<ReturnType<typeof addUserDataToPosts>>;
+
+      const postIds = posts.map((post) => post.id);
+
+      const likedPostIds = ctx.userId
+        ? await getLikedPostIds(ctx.userId, postIds, ctx)
+        : [];
+
+      return addUserDataToPosts(posts, likedPostIds);
     }),
 
   create: privateProcedure

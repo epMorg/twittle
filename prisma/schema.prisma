@@ -11,10 +11,23 @@ datasource db {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  content   String
-  authorId  String
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  content     String
+  authorId    String
+  likeCount   Int      @default(0)
+  replyToId   String?
+  replyCount  Int      @default(0)  
 
   @@index([authorId])
+  @@index([replyToId])
+}
+
+model Like {
+  userId String
+  postId String
+  createdAt DateTime @default(now())
+
+  @@id([userId, postId]) // composite primary key
+  @@index([postId])
 }

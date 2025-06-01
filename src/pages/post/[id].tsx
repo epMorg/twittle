@@ -6,26 +6,26 @@ import { PostView } from "~/components/postview";
 import { PageLayout } from "~/components/layout";
 import ErrorView from "~/components/errorview";
 
+const SinglePostPage: NextPage<{ id: string }> = ({ id }) => {
+  const { data } = api.posts.getPostById.useQuery({ id: id });
 
-
-const SinglePostPage: NextPage<{id: string}> = ({id}) => {
-  
-  const { data } = api.posts.getPostById.useQuery({id: id})
-  
-  if (!data){
-    return 
+  if (!data) {
+    return (
       <PageLayout>
         <ErrorView code={404} message={"Post not found!"} />
-      </PageLayout>  
+      </PageLayout>
+    );
   }
 
   return (
     <>
       <Head>
-        <title>{`${data.post.content} - ${data.author.username}`}</title>
+        <title>
+          {data.post.content} - ${data.author.username}`
+        </title>
       </Head>
       <PageLayout>
-      <PostView post={data.post} author={data.author} />      
+        <PostView post={data.post} author={data.author} />
       </PageLayout>
     </>
   );
@@ -38,7 +38,7 @@ export const getStaticProps: GetStaticProps = async (context) => {
   if (typeof id !== "string") throw new Error("no slug");
 
   await ssg.posts.getPostById.prefetch({
-    id: id
+    id: id,
   });
 
   return {

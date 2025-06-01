@@ -3,6 +3,7 @@ import type { RouterOutputs } from "~/utils/api";
 import dayjs from "dayjs";
 import Image from "next/image";
 import relativeTime from "dayjs/plugin/relativeTime";
+import ErrorView from "./errorview";
 
 dayjs.extend(relativeTime);
 
@@ -10,6 +11,13 @@ type PostWithUser = RouterOutputs["posts"]["getAll"][number];
 
 export const PostView = (props: PostWithUser) => {
   const { post, author } = props;
+
+  if(!post)
+    return(
+      <ErrorView code={404} message={"No post found"}></ErrorView>
+    )
+  
+
   return (
     <div className="flex gap-3 border-b border-slate-500 p-4">
       <Image
@@ -31,6 +39,9 @@ export const PostView = (props: PostWithUser) => {
           </Link>
         </div>
         <span className="text-2xl">{post.content}</span>
+        <div>
+          <div>Likes:<span>{post.likeCount}</span></div>
+        </div>
       </div>
     </div>
   );
