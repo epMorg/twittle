@@ -4,6 +4,6 @@ export const trimUserInfoForClient = (user: User) => {
     return {
       userId: user.id,
       username: user.username,
-      profileImageUrl: user.profileImageUrl 
+      profileImageUrl: user.imageUrl 
     };
   };
