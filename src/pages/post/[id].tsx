@@ -7,25 +7,24 @@ import { PageLayout } from "~/components/layout";
 import ErrorView from "~/components/errorview";
 
 const SinglePostPage: NextPage<{ id: string }> = ({ id }) => {
-  const { data } = api.posts.getPostById.useQuery({ id: id });
+  const { data } = api.posts.getPostById.useQuery({ id });
 
-  if (!data) {
+  if (!data)
     return (
       <PageLayout>
         <ErrorView code={404} message={"Post not found!"} />
       </PageLayout>
     );
-  }
 
   return (
     <>
       <Head>
         <title>
-          {data.post.content} - ${data.author.username}`
+          `${data.post.content} - ${data.author.username}`
         </title>
       </Head>
       <PageLayout>
-        <PostView post={data.post} author={data.author} />
+        <PostView post={data.post} author={data.author} isLiked={data.isLiked} />
       </PageLayout>
     </>
   );
@@ -43,7 +42,7 @@ export const getStaticProps: GetStaticProps = async (context) => {
 
   return {
     props: {
-      trpcSate: ssg.dehydrate(),
+      trpcState: ssg.dehydrate(),
       id: id,
     },
   };

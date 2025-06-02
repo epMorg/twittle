@@ -17,7 +17,6 @@ export const PostView = (props: PostWithUser) => {
       <ErrorView code={404} message={"No post found"}></ErrorView>
     )
   
-
   return (
     <div className="flex gap-3 border-b border-slate-500 p-4">
       <Image

@@ -8,7 +8,6 @@ import { generateSSGHelper } from "~/server/helpers/ssgHelper";
 import  ErrorView  from "~/components/errorview";
 
 const ProfileFeed = (props: {userId: string}) => {
-
   const { data } = api.posts.getPostsByUserId.useQuery({userId: props.userId});
 
   if (!data || data.length === 0) return <div>User has not posted</div>

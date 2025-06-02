@@ -77,6 +77,7 @@ export const postsRouter = createTRPCRouter({
       orderBy: [{ createdAt: "desc" }],
     });
 
+    
     const postIds = posts.map((post) => post.id);
 
     const likedPostIds = ctx.userId
