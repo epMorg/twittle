@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import { PostView } from "~/components/postview";
@@ -41,7 +41,7 @@ const CreatePostWizard = () => {
   return (
     <div className="flex w-full gap-3">
       <Image
-        src={user.profileImageUrl}
+        src={user.imageUrl}
         alt="Profile Image"
         className="h-14 w-14 rounded-full"
         width={56}
@@ -94,10 +94,16 @@ const Feed = () => {
 const Home: NextPage = () => {
   const { isSignedIn: userSignedIn, isLoaded: userLoaded } = useUser();
 
-  // start fetching data asap
-  api.posts.getAll.useQuery();
+  const { data, refetch, isLoading } = api.posts.getAll.useQuery(undefined, {
+    enabled: false, // prevent auto-fetch on mount
+  });
 
-  // Return empty div if user not loaded
+  useEffect(() => {
+    if (userLoaded) {
+      void refetch();
+    }
+  }, [userLoaded, refetch]);
+
   if (!userLoaded) return <div />;
 
   return (

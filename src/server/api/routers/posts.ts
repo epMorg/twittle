@@ -14,14 +14,14 @@ import type { Post } from "@prisma/client";
 
 type Context = inferAsyncReturnType<typeof createTRPCContext>;
 
-const getLikedPostIds = async (
+const getLikedPostIdsForUser = async (
   userId: string,
   postIds: string[],
   ctx: Context
 ) => {
-  const likedPosts = await ctx.prisma.like.findMany({
+  const likedPostsByUser = await ctx.prisma.likedPost.findMany({
     where: {
-      userId: userId,
+      userId,
       postId: {
         in: postIds,
       },
@@ -31,10 +31,31 @@ const getLikedPostIds = async (
     },
   });
 
-  return likedPosts.map((post) => post.postId);
+  return likedPostsByUser.map((post) => post.postId);
 };
 
-const addUserDataToPosts = async (posts: Post[], likedPostIds: string[]) => {
+const getLikedCountForPosts = async (postIds: string[], ctx: Context) => {
+  const likedCountsForPosts = await ctx.prisma.likedPost.groupBy({
+    by: ["postId"],
+    where: {
+      postId: {
+        in: postIds,
+      },
+    },
+    _count: true,
+  });
+  return new Map(
+    likedCountsForPosts.map((item) => {
+      return [item.postId, item._count];
+    })
+  );
+};
+
+const addUserDataToPosts = async (
+  posts: Post[],
+  likedPostIdsByUser: string[],
+  ctx: Context
+) => {
   const users = (
     await clerkClient.users.getUserList({
       userId: posts.map((post) => post.authorId),
@@ -43,6 +64,11 @@ const addUserDataToPosts = async (posts: Post[], likedPostIds: string[]) => {
   ).map(trimUserInfoForClient);
 
   const userMap = new Map(users.map((user) => [user.userId, user]));
+
+  const likeCountForPostsMap = await getLikedCountForPosts(
+    posts.map((p) => p.id),
+    ctx
+  );
 
   return posts.map((post) => {
     const author = userMap.get(post.authorId);
@@ -54,12 +80,15 @@ const addUserDataToPosts = async (posts: Post[], likedPostIds: string[]) => {
       });
 
     return {
-      post: post,
+      post: {
+        ...post,
+        likeCount: likeCountForPostsMap.get(post.id) ?? 0,
+      },
       author: {
         ...author,
         username: author.username,
       },
-      isLiked: likedPostIds.includes(post.id),
+      isLikedByUser: likedPostIdsByUser.includes(post.id),
     };
   });
 };
@@ -77,14 +106,13 @@ export const postsRouter = createTRPCRouter({
       orderBy: [{ createdAt: "desc" }],
     });
 
-    
     const postIds = posts.map((post) => post.id);
 
-    const likedPostIds = ctx.userId
-      ? await getLikedPostIds(ctx.userId, postIds, ctx)
+    const likedPostIdsForUser = ctx.userId
+      ? await getLikedPostIdsForUser(ctx.userId, postIds, ctx)
       : [];
 
-    return addUserDataToPosts(posts, likedPostIds);
+    return addUserDataToPosts(posts, likedPostIdsForUser, ctx);
   }),
 
   getPostById: publicProcedure
@@ -103,10 +131,10 @@ export const postsRouter = createTRPCRouter({
         });
 
       const likedPostIds = ctx.userId
-        ? await getLikedPostIds(ctx.userId, [post.id], ctx)
+        ? await getLikedPostIdsForUser(ctx.userId, [post.id], ctx)
         : [];
 
-      return (await addUserDataToPosts([post], likedPostIds))[0];
+      return (await addUserDataToPosts([post], likedPostIds, ctx))[0];
     }),
 
   getPostsByUserId: publicProcedure
@@ -120,7 +148,7 @@ export const postsRouter = createTRPCRouter({
         where: {
           authorId: input.userId,
         },
-        take: 100,
+        take: 4,
         orderBy: [{ createdAt: "desc" }],
       });
 
@@ -130,10 +158,10 @@ export const postsRouter = createTRPCRouter({
       const postIds = posts.map((post) => post.id);
 
       const likedPostIds = ctx.userId
-        ? await getLikedPostIds(ctx.userId, postIds, ctx)
+        ? await getLikedPostIdsForUser(ctx.userId, postIds, ctx)
         : [];
 
-      return addUserDataToPosts(posts, likedPostIds);
+      return addUserDataToPosts(posts, likedPostIds, ctx);
     }),
 
   create: privateProcedure
@@ -159,5 +187,47 @@ export const postsRouter = createTRPCRouter({
       });
 
       return post;
+    }),
+  createLikedPostEntry: privateProcedure
+    .input(
+      z.object({
+        postId: z.string().min(1).max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const likedByUserId = ctx.userId;
+
+      const { success } = await ratelimit.limit(likedByUserId);
+
+      if (!success) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      }
+
+      const likedPost = await ctx.prisma.likedPost.create({
+        data: {
+          postId: input.postId,
+          userId: likedByUserId,
+        },
+      });
+
+      return likedPost;
+    }),
+  deleteLikedPostEntry: privateProcedure
+    .input(
+      z.object({
+        postId: z.string().min(1).max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+
+      const deleted = await ctx.prisma.likedPost.deleteMany({
+        where: {
+          postId: input.postId,
+          userId: userId,
+        },
+      });
+
+      return deleted;
     }),
 });

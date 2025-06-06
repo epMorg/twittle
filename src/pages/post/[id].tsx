@@ -7,7 +7,10 @@ import { PageLayout } from "~/components/layout";
 import ErrorView from "~/components/errorview";
 
 const SinglePostPage: NextPage<{ id: string }> = ({ id }) => {
-  const { data } = api.posts.getPostById.useQuery({ id });
+  const { data, isLoading, isFetching, isFetched } =
+    api.posts.getPostById.useQuery({ id });
+
+  const stillFetchingFreshData = isFetched && isFetching;
 
   if (!data)
     return (
@@ -19,12 +22,14 @@ const SinglePostPage: NextPage<{ id: string }> = ({ id }) => {
   return (
     <>
       <Head>
-        <title>
-          `${data.post.content} - ${data.author.username}`
-        </title>
+        <title>{`${data.post.content} - ${data.author.username}`} </title>
       </Head>
       <PageLayout>
-        <PostView post={data.post} author={data.author} isLiked={data.isLiked} />
+        <PostView
+          post={data.post}
+          author={data.author}
+          isLikedByUser={data.isLikedByUser}
+        />
       </PageLayout>
     </>
   );
