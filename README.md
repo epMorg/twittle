@@ -1,8 +1,10 @@
-# Basic Twitter Clone using Next.js / tRPC / Prisma / Tailwind
+# Nuts and bolts Twitter Clone using Next.js / tRPC / Prisma / Tailwind
 
 This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
 
-This repo demonstrates modern full-stack development techniques with Next.js and tRPC, including:
+The purpose of this repository is to demonstrate my command of a productive, efficient, and modern development stack — leveraging tools like Next.js, tRPC, Prisma, and Tailwind CSS to build robust, scalable applications with end-to-end type safety and great DX.
+
+This project highlights my approach to full-stack development with the T3 stack, focusing on real-world implementation of key strategies and best practices, including:
 
 Rendering Strategies
 
@@ -28,3 +30,33 @@ Full-Stack Features
 
     Informative Error Handling via custom error pages and toast notifications
 
+Getting started:
+
+1. Clone the Repository
+
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name
+
+
+2. Install Dependencies
+
+Make sure you have Node.js installed (v18 or higher recommended), then run:
+
+npm install
+
+
+3. Set Up Environment Variables
+
+Copy the provided .env.example to a new .env file:
+
+cp .env.example .env
+
+
+4. Generate the Prisma Client
+
+npx prisma generate
+
+
+5. Run the Development Server
+
+npm run dev
