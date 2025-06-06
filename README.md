@@ -34,29 +34,29 @@ Getting started:
 
 1. Clone the Repository
 
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+`git clone https://github.com/your-username/your-repo-name.git`
+`cd your-repo-name`
 
 
 2. Install Dependencies
 
 Make sure you have Node.js installed (v18 or higher recommended), then run:
 
-npm install
+`npm install`
 
 
 3. Set Up Environment Variables
 
 Copy the provided .env.example to a new .env file:
 
-cp .env.example .env
+`cp .env.example .env`
 
 
 4. Generate the Prisma Client
 
-npx prisma generate
+`npx prisma generate`
 
 
 5. Run the Development Server
 
-npm run dev
+`npm run dev`
